@@ -1,8 +1,8 @@
 InputFolder=/vast/home/xinhuazhang/Downloads/Stack1M_Compressed/
 OutputFolder=/vast/home/xinhuazhang/Workspaces/ParticleTracking/output/Tracks
 PixelTreshold=5000
-ProbThreshold=0.5
-Sigma=0.018
+ProbThreshold=1
+Sigma=0.5
 Tau=10
 NumDir=360
 NumSpeed=1

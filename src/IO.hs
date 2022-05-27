@@ -4,8 +4,9 @@ module IO where
 import Codec.Picture
 import Data.Array.Repa as R
 import Data.List as L
+import Data.Time
+import Data.Vector.Unboxed as VU
 import GHC.Float
-import Particles
 import Text.Printf
 
 -- Extract a pixel at a given position, (x, y, the origin is assumed to be at the corner top left, positive y to the bottom of the image)
@@ -46,3 +47,12 @@ array2image :: R.Array U DIM2 Double -> Image Pixel16
 array2image arr =
   let (Z :. rows :. cols) = extent arr
    in generateImage (\x y -> round $ arr R.! (Z :. y :. x)) cols rows
+
+{-# INLINE printCurrentTime #-}
+printCurrentTime :: String -> IO ()
+printCurrentTime s = do
+  time <- getZonedTime
+  printf
+    "%s %s\n"
+    (L.take 8 . show . localTimeOfDay . zonedTimeToLocalTime $ time)
+    s

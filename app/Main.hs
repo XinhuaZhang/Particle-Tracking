@@ -27,14 +27,14 @@ main = do
       pixelThr = argPixelThreshold opts
       probThr = argProbThreshold opts
       stParm =
-        StParm
+        StParam
           (argNumDir opts)
           (argNumSpeed opts)
           (argMeanSpeed opts)
           (argMinSpeed opts)
           (argMaxSpeed opts)
           (argSpeedSTD opts)
-      tmParm = TranMatParm (argSigma opts) (argTau opts)
+      tmParm = TranMatParam (argSigma opts) (argTau opts)
       trParm =
         TrackingParam
           (argPixelThreshold opts)
@@ -56,8 +56,8 @@ main = do
       prParm = PrintParam rows cols outputFolder
   createDirectoryIfMissing True outputFolder
   tracks <-
-    findTracksFromFile3 prParm stParm tmParm trParm initTracks .
-    L.map (\x -> inputFolder </> x) . L.take 2 . L.tail $
+    findTracksFromFile4 prParm stParm tmParm trParm initTracks .
+    L.map (\x -> inputFolder </> x) . L.take 180 . L.tail $
     xs
   MP.mapM_
     (\tr ->

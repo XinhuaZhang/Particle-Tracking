@@ -4,6 +4,7 @@ module Tracks where
 import Analytic
 import IO
 import Particles
+import Plot
 import States
 
 import Control.Monad as M
@@ -16,7 +17,6 @@ import Text.Printf
 
 import System.Directory
 import System.FilePath
-
 
 data Track = Track
   { trackID :: Int
@@ -43,7 +43,7 @@ normalizeTracksState =
     rdeepseq
     (\(Track idx tBd (p:ps)) -> Track idx tBd ((normalizeParticleState p) : ps))
 
-updateTracks1 :: StParm -> TranMatParm -> Int -> [Track] -> Particle -> [Track]
+updateTracks1 :: StParam -> TranMatParam -> Int -> [Track] -> Particle -> [Track]
 updateTracks1 stParm tmParm thr tracks p1 =
   let xs =
         parMap
@@ -67,7 +67,7 @@ updateTracks1 stParm tmParm thr tracks p1 =
    in update maxTID p tracks
 
 updateTracks2 ::
-     Int -> StParm -> TranMatParm -> Double -> Int -> [Track] -> Particle -> IO [Track]
+     Int -> StParam -> TranMatParam -> Double -> Int -> [Track] -> Particle -> IO [Track]
 updateTracks2 iteration stParm tmParm thr maxLen tracks p1 = do
   let (x1, y1) = particleCenter p1
   printf "pID = %d\n" (particleID p1)
@@ -128,14 +128,14 @@ updateTracks3 ::
   -> Int
   -> Int
   -> Int
-  -> StParm
-  -> TranMatParm
+  -> StParam
+  -> TranMatParam
   -> Double
   -> Int
   -> [Track]
   -> Particle
   -> IO [Track]
-updateTracks3 folderPath iteration rows cols stParm tmParm thr maxLen tracks p1 = do
+updateTracks3 folderPath rows cols iteration stParm tmParm thr maxLen tracks p1 = do
   let (x1, y1) = particleCenter p1
   -- printf "pID = %d\n" (particleID p1)
   -- let outputFolder = folderPath </> (printf "%d_%d" iteration (particleID p1))
@@ -195,6 +195,68 @@ updateTracks3 folderPath iteration rows cols stParm tmParm thr maxLen tracks p1 
           in return $ (Track tID iteration [defaultP1]) : tracks
 
 
+updateTrackParticlesDebug ::
+     FilePath
+  -> Int
+  -> Int
+  -> Int
+  -> StParam
+  -> TranMatParam
+  -> Double
+  -> [Particle]
+  -> Track
+  -> IO Track
+updateTrackParticlesDebug folderPath rows cols iteration stParm tmParm thr ps track = do
+  let p0 = L.head . trackPath $ track
+      (x0, y0) = particleCenter p0
+  -- printf "Track ID: %d\n" (trackID track)
+  -- let outputFolder = folderPath </> (printf "%d" iteration)
+  -- createDirectoryIfMissing True outputFolder
+  -- -- saveParticle rows cols (outputFolder </> printf "1_%.1f_%.1f.png" x1 y1) p1
+  -- plotDirection (outputFolder </> printf "%d.png" (trackID track)) p0
+  xs <-
+    M.mapM
+      (\p1 -> do
+         let (x1, y1) = particleCenter p1
+             pID = particleID p1
+             d = sqrt $ (x0 - x1) ^ 2 + (y0 - y1) ^ 2
+         newP1 <- transitionP stParm tmParm p0 p1
+         v <- sumAllP . particleState $ newP1
+         return (pID, newP1, v, d))
+      ps
+  -- let ys = L.take 2 . L.reverse . L.sortOn (\(_, _, v, _) -> v) $ xs
+  -- M.mapM_
+  --   (\(pID, p1, v, d) -> do
+  --      let (x1, y1) = particleCenter p1
+  --          -- saveParticle
+  --          --   rows
+  --          --   cols
+  --          --   (outputFolder </> printf "0_%.1f_%.1f.png" x0 y0)
+  --          --   p0
+  --      printf
+  --        "Particle ID: %d P0: (%.2f, %.2f) P1: (%.2f, %.2f) %.2f (%.2f, %.2f) V: %.4f\n"
+  --        pID
+  --        x0
+  --        y0
+  --        x1
+  --        y1
+  --        d
+  --        (x1 - x0)
+  --        (y1 - y0)
+  --        v)
+  --   ys
+  let (maxPID', maxV', maxP') =
+        L.foldl'
+          (\(maxPID, maxV, maxP) (pID, p1, v, d) ->
+             if v > maxV
+               then (pID, v, p1)
+               else (maxPID, maxV, maxP))
+          (-1, -1, undefined)
+          xs
+  if maxV' > thr
+    then return $ addPartcileTrack (normalizeParticleState maxP') track
+    else return track
+
 update :: Int -> Particle -> [Track] -> [Track]
 update tIDMax _ [] = error (printf "update: Empty tracks. tIDMax = %d" tIDMax)
 update tIDMax p (t:ts) =
@@ -212,17 +274,19 @@ trimTracks n (t:ts) =
     else t : trimTracks n ts
 
 
-{-# INLINE saveParticle #-}
-saveParticle :: Int -> Int -> FilePath -> Particle -> IO ()
-saveParticle rows cols filePath p =
-  let xs = particlePoints p
+{-# INLINE saveTrack #-}
+saveTrack :: Int -> Int -> FilePath -> Track -> IO ()
+saveTrack rows cols filePath tr =
+  let xs = L.concatMap particlePoints . trackPath $ tr
       vec = VU.replicate (rows * cols) (0 :: Double)
       vec' =
-        vec VU.//
-        (L.map
-           (\(Point x y v) ->
-              let i = convertIndex' cols x y
-               in (i, 65535))
-           xs)
+        VU.accum
+          (+)
+          vec
+          (L.map
+             (\(Point x y v) ->
+                let i = convertIndex' cols x y
+                 in (i, v))
+             xs)
       img' = R.fromUnboxed (Z :. rows :. cols) vec'
    in write filePath img'

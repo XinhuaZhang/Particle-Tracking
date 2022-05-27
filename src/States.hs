@@ -5,7 +5,7 @@ import Analytic
 import Data.Array.Repa as R
 import Particles
 
-data StParm = StParm
+data StParam = StParam
   { stNumDir :: Int
   , stNumSpeed :: Int
   , stMeanSpeed :: Double
@@ -18,8 +18,8 @@ data StParm = StParm
 gaussian1D :: (Fractional a, Floating a) => a -> a -> a
 gaussian1D x std = exp (x ^ 2 / ((-2) * std ^ 2)) / std * sqrt (2 * pi)
 
-initStateGaussian :: StParm -> State
-initStateGaussian (StParm numDir numSpeed meanSpeed minSpeed maxSpeed std) =
+initStateGaussian :: StParam -> State
+initStateGaussian (StParam numDir numSpeed meanSpeed minSpeed maxSpeed std) =
   let deltaS = (log (maxSpeed / minSpeed)) / fromIntegral numSpeed
       logMeanSpeed = log meanSpeed
       logMinSpeed = log minSpeed
@@ -31,8 +31,8 @@ initStateGaussian (StParm numDir numSpeed meanSpeed minSpeed maxSpeed std) =
       z = R.sumAllS arr
    in computeS . R.map (/ z) $ arr 
    
-initState :: StParm -> State
-initState (StParm numDir numSpeed meanSpeed minSpeed maxSpeed std) =
+initState :: StParam -> State
+initState (StParam numDir numSpeed meanSpeed minSpeed maxSpeed std) =
   let arr =
         computeUnboxedS . fromFunction (Z :. numDir :. numSpeed) $ \(Z :. i :. j) ->
           1
@@ -40,7 +40,7 @@ initState (StParm numDir numSpeed meanSpeed minSpeed maxSpeed std) =
    in computeS . R.map (/ z) $ arr 
    
 
-transitionS :: StParm -> TranMatParm -> Particle -> Particle -> Particle
+transitionS :: StParam -> TranMatParam -> Particle -> Particle -> Particle
 transitionS stParm tmParm p0 p1 =
   let minSpeed = stMinSpeed stParm
       maxSpeed = stMaxSpeed stParm
@@ -68,7 +68,7 @@ transitionS stParm tmParm p0 p1 =
            in sumAllS transitionMatrix
    in setState state1 p1
 
-transitionP :: StParm -> TranMatParm -> Particle -> Particle -> IO Particle
+transitionP :: StParam -> TranMatParam -> Particle -> Particle -> IO Particle
 transitionP stParm tmParm p0 p1 = do
   let minSpeed = stMinSpeed stParm
       maxSpeed = stMaxSpeed stParm
@@ -95,3 +95,4 @@ transitionP stParm tmParm p0 p1 = do
                            (R2S1RP x1 y1 dir1 speed1)
        in sumAllS transitionMatrix
   return $ setState state1 p1
+

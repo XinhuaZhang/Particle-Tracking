@@ -11,7 +11,10 @@ module Particles
   , findParticles
   , convertIndex'
   , filterParticles
+  , saveParticle
   ) where
+  
+import IO
 
 import Control.DeepSeq
 import Data.Vector.Unboxed as VU
@@ -135,8 +138,7 @@ findParticles map rows cols =
           ([], VU.replicate (rows * cols) False, 0)
           xs
    in ys
-
-
+   
 dfs ::
      HashMap Point Particle
   -> VU.Vector Bool
@@ -166,3 +168,19 @@ convertIndex' cols x y = x * cols + y
 {-# INLINE filterParticles #-}
 filterParticles :: Int -> [Particle] -> [Particle]
 filterParticles n = L.take n . L.reverse . L.sortOn getBrightness
+
+
+{-# INLINE saveParticle #-}
+saveParticle :: Int -> Int -> FilePath -> Particle -> IO ()
+saveParticle rows cols filePath p =
+  let xs = particlePoints p
+      vec = VU.replicate (rows * cols) (0 :: Double)
+      vec' =
+        vec VU.//
+        (L.map
+           (\(Point x y v) ->
+              let i = convertIndex' cols x y
+               in (i, 65535))
+           xs)
+      img' = R.fromUnboxed (Z :. rows :. cols) vec'
+   in write filePath img'

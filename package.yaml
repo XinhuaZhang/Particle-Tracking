@@ -23,8 +23,8 @@ dependencies:
 - base >= 4.7 && < 5
 - deepseq
 - directory
-# - ffmpeg-light
 - filepath
+- gnuplot
 - hashable
 - hmatrix
 - hmatrix-gsl

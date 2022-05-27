@@ -2,8 +2,8 @@
 {-# LANGUAGE StrictData #-}
 module Analytic
   ( R2S1RP(..)
-  , TranMatParm(..)
-  , TranMatCParm(..)
+  , TranMatParam(..)
+  , TranMatCParam(..)
   , computePji
   , computePjiCorner
   , computePjiCorner'
@@ -23,12 +23,12 @@ instance Eq R2S1RP where
   (==) (R2S1RP x1 y1 theta1 _) (R2S1RP x2 y2 theta2 _) =
     (x1 == x2) && (y1 == y2)
     
-data TranMatParm = TranMatParm
+data TranMatParam = TranMatParam
   { tmSimga :: Double
   , tmTau :: Double
   }
   
-data TranMatCParm = TranMatCParm
+data TranMatCParam = TranMatCParam
   { tmcDelta :: Double
   , tmcSimga :: Double
   , tmcTau :: Double
@@ -75,7 +75,7 @@ computePjit sigma tau (a, b, c) t =
   exp (-t / tau) /
   sqrt ((pi * sigma) ^ 3 * (t ^ 7) / 2)
 
-computePji :: TranMatParm -> R2S1RP -> R2S1RP -> Double
+computePji :: TranMatParam -> R2S1RP -> R2S1RP -> Double
 computePji parm x_i x_j =
   if x_i == x_j
     then 0
@@ -117,7 +117,7 @@ computePjiCorner delta sigma tau orientations point@(R2S1RP x y theta gamma) =
   case findIntersectionPoint delta point of
     Nothing -> 0
     Just z ->
-      let p1 = computePji (TranMatParm sigma tau) (R2S1RP 0 0 0 gamma) (R2S1RP z 0 0 gamma)
+      let p1 = computePji (TranMatParam sigma tau) (R2S1RP 0 0 0 gamma) (R2S1RP z 0 0 gamma)
                       -- (newX, newY) = rotate (x - z, y) (-theta)
                       -- p2 =
                       --   computePji
@@ -125,7 +125,7 @@ computePjiCorner delta sigma tau orientations point@(R2S1RP x y theta gamma) =
                       --     tau
                       --     (R2S1RP 0 0 0 gamma)
                       --     (R2S1RP newX newY 0 gamma)
-          p2 = computePji (TranMatParm sigma tau) (R2S1RP z 0 theta gamma) point
+          p2 = computePji (TranMatParam sigma tau) (R2S1RP z 0 theta gamma) point
                       -- p1 = L.foldl' (\s ori -> s + computePji sigma tau
                       --   (R2S1RP 0 0 0 gamma) (R2S1RP z 0 ori gamma)) 0
                       --   orientations p2 = L.foldl' (\s ori -> s +
@@ -142,7 +142,7 @@ computePjiCorner' delta sigma tau threshold orientations point@(R2S1RP x y theta
     Just z ->
       let p1 =
             computePji
-              (TranMatParm sigma tau)
+              (TranMatParam sigma tau)
               (R2S1RP 0 0 0 gamma)
               (R2S1RP z 0 0 gamma)
        in if p1 < threshold
@@ -152,7 +152,7 @@ computePjiCorner' delta sigma tau threshold orientations point@(R2S1RP x y theta
                          (\s ori ->
                             s +
                             computePji
-                              (TranMatParm sigma tau)
+                              (TranMatParam sigma tau)
                               (R2S1RP 0 0 0 gamma)
                               (R2S1RP z 0 ori gamma))
                          0
@@ -162,7 +162,7 @@ computePjiCorner' delta sigma tau threshold orientations point@(R2S1RP x y theta
                          (\s ori ->
                             s +
                             computePji
-                              (TranMatParm sigma tau)
+                              (TranMatParam sigma tau)
                               (R2S1RP x y (theta + pi) gamma)
                               (R2S1RP z 0 ori gamma)
                                                 -- point

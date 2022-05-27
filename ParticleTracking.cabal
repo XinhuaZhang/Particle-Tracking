@@ -29,6 +29,7 @@ library
       Args
       IO
       Particles
+      Plot
       States
       Tracks
       Workflow
@@ -42,6 +43,7 @@ library
     , deepseq
     , directory
     , filepath
+    , gnuplot
     , hashable
     , hmatrix
     , hmatrix-gsl
@@ -67,6 +69,7 @@ executable ParticleTracking-exe
     , deepseq
     , directory
     , filepath
+    , gnuplot
     , hashable
     , hmatrix
     , hmatrix-gsl
@@ -94,6 +97,7 @@ test-suite FindParticles-test
     , deepseq
     , directory
     , filepath
+    , gnuplot
     , hashable
     , hmatrix
     , hmatrix-gsl
@@ -121,6 +125,7 @@ test-suite ParticleBrightness-test
     , deepseq
     , directory
     , filepath
+    , gnuplot
     , hashable
     , hmatrix
     , hmatrix-gsl
