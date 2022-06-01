@@ -12,6 +12,7 @@ data Options = Options
   { argFilePath :: String
   , argFolderPath :: String
   , argOutputFolderPath :: String
+  , argMaxNumFrame :: Int
   , argPixelThreshold :: Int
   , argProbThreshold :: Double
   , argSigma :: Double
@@ -31,6 +32,7 @@ defaultOptions =
     { argFilePath = ""
     , argFolderPath = ""
     , argOutputFolderPath = ""
+    , argMaxNumFrame = 0
     , argPixelThreshold = -1
     , argProbThreshold = 0
     , argSigma = 0.018
@@ -61,6 +63,13 @@ options =
       ["outputFolderPath"]
       (ReqArg (\arg opt -> return opt {argOutputFolderPath = arg}) "DIR")
       "Output folder"
+  ,  Option
+       "n"
+       ["maxNumFrame"]
+       (ReqArg
+          (\arg opt -> return opt {argMaxNumFrame = read arg :: Int})
+          "VALUE")
+       "The maximum number of frames will be processed."
   , Option
       "p"
       ["pixelThreshold"]

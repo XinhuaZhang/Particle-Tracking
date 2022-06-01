@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Tracks where
 
@@ -17,6 +18,7 @@ import Text.Printf
 
 import System.Directory
 import System.FilePath
+import System.IO
 
 data Track = Track
   { trackID :: Int
@@ -30,12 +32,23 @@ instance NFData Track
 getTrackLength :: Track -> Int
 getTrackLength = L.length . trackPath
 
+{-# INLINE setTrackBirthday #-}
+setTrackBirthday :: Int -> Track -> Track
+setTrackBirthday bd (Track tID _ path) = Track tID bd path
+
 {-# INLINE addPartcileTrack #-}
 addPartcileTrack :: Particle -> Track -> Track
 addPartcileTrack p (Track tID tBd path) = Track tID tBd (p : path)
 
+{-# INLINE initTracks #-}
 initTracks :: [Particle] -> [Track]
 initTracks = L.reverse . L.zipWith (\idx p -> Track idx 0 [p]) [0 ..]
+
+{-# INLINE createTracksFromParticles #-}
+createTracksFromParticles :: Int -> Int -> StParam -> [Particle] -> [Track]
+createTracksFromParticles prevTrackID bd stParam =
+  L.reverse . L.zipWith (\idx p -> Track idx bd [setState st p]) [prevTrackID + 1 ..]
+  where st = initState stParam
 
 normalizeTracksState :: [Track] -> [Track]
 normalizeTracksState =
@@ -70,7 +83,7 @@ updateTracks2 ::
      Int -> StParam -> TranMatParam -> Double -> Int -> [Track] -> Particle -> IO [Track]
 updateTracks2 iteration stParm tmParm thr maxLen tracks p1 = do
   let (x1, y1) = particleCenter p1
-  printf "pID = %d\n" (particleID p1)
+  printf "pID = %s\n" (show $ particleID p1)
   xs <-
     M.mapM
       (\tr ->
@@ -251,11 +264,46 @@ updateTrackParticlesDebug folderPath rows cols iteration stParm tmParm thr ps tr
              if v > maxV
                then (pID, v, p1)
                else (maxPID, maxV, maxP))
-          (-1, -1, undefined)
+          ((-1, -1), -1, undefined)
           xs
   if maxV' > thr
     then return $ addPartcileTrack (normalizeParticleState maxP') track
     else return track
+    
+
+updateTrackParticlesS ::
+     Int
+  -> Int
+  -> Int
+  -> StParam
+  -> TranMatParam
+  -> Double
+  -> [Particle]
+  -> Track
+  -> Track
+updateTrackParticlesS rows cols iteration stParm tmParm thr ps track =
+  let p0 = L.head . trackPath $ track
+      (!x0, !y0) = particleCenter p0
+      xs =
+        L.map
+          (\p1
+            ->
+             let !pID = particleID p1              
+                 newP1 = transitionS stParm tmParm p0 p1
+                 !v = sumAllS . particleState $ newP1
+              in (pID, newP1, v))
+          ps
+      (maxPID', maxV', maxP') =
+        L.foldl'
+          (\(maxPID, maxV, maxP) (pID, p1, v) ->
+             if v > maxV
+               then (pID, v, p1)
+               else (maxPID, maxV, maxP))
+          ((-1, -1), -1, undefined)
+          xs
+   in if maxV' > thr
+        then addPartcileTrack (normalizeParticleState maxP') track
+        else track
 
 update :: Int -> Particle -> [Track] -> [Track]
 update tIDMax _ [] = error (printf "update: Empty tracks. tIDMax = %d" tIDMax)
@@ -265,19 +313,77 @@ update tIDMax p (t:ts) =
     else t : update tIDMax p ts
     
 
-{-# INLINE trimTracks #-}
 trimTracks :: Int -> [Track] -> [Track]
 trimTracks _ [] = []
 trimTracks n (t:ts) =
-  if n - trackBirthday t == 5 && getTrackLength t <= 3
-    then trimTracks n ts
-    else t : trimTracks n ts
+  let !bd =  trackBirthday t
+      (!a, !b) = divMod (n - bd) 5
+  in if getTrackLength t <= 10 && b == 0 && getTrackLength t <= 3 * a && n > bd
+       then trimTracks n ts
+       else t : trimTracks n ts
+       
+
+trimTracks' :: Int -> [Track] -> ([Track], Int)
+trimTracks' _ [] = ([], -1)
+trimTracks' n (t:ts) =
+  let !bd = trackBirthday t
+      (!a, !b) = divMod (n - bd) 5
+      (xs, !maxLen) = trimTracks' n ts
+   in if b == 0 && getTrackLength t <= 3 * a && n > bd
+        then (xs, max (getTrackLength t) maxLen)
+        else (t : xs, maxLen)
 
 
 {-# INLINE saveTrack #-}
 saveTrack :: Int -> Int -> FilePath -> Track -> IO ()
 saveTrack rows cols filePath tr =
-  let xs = L.concatMap particlePoints . trackPath $ tr
+  let xs =
+        L.map
+          (\ps ->
+             let n = L.length ps
+                 s = L.sum . L.map (\(Point _ _ v) -> v) $ ps
+                 (Point x y _) = L.head ps
+              in Point x y (s / fromIntegral n)) .
+        L.group . L.sort . L.concatMap particlePoints . trackPath $
+        tr
+      vec = VU.replicate (rows * cols) (0 :: Double)
+      vec' =
+        VU.accum
+          (+)
+          vec
+          (L.map
+             (\(Point x y v) ->
+                let i = convertIndex' cols x y
+                 in (i, v))
+             xs)
+      img' = R.fromUnboxed (Z :. rows :. cols) vec'
+   in write filePath img'
+
+{-# INLINE saveTrackMeanStd #-}
+saveTrackMeanStd :: FilePath -> Track -> IO ()
+saveTrackMeanStd filePath tr =
+  withFile filePath WriteMode $ \h ->
+    M.mapM_
+      (\p ->
+         let (!cX, !cY) = particleCenter p
+             (!stdX, !stdY) = getParticleStd p
+          in hPutStrLn h (printf "%.2f %.2f %.2f %.2f" cX cY stdX stdY)) .
+    trackPath $
+    tr
+
+
+{-# INLINE saveTracks #-}
+saveTracks :: Int -> Int -> FilePath -> [Track] -> IO ()
+saveTracks rows cols filePath tracks = do
+  let xs =
+        L.map
+          (\ps ->
+             let n = L.length ps
+                 s = L.sum . L.map (\(Point _ _ v) -> v) $ ps
+                 (Point x y _) = L.head ps
+              in Point x y (s / fromIntegral n)) .
+        L.group . L.sort . L.concatMap particlePoints . L.concatMap trackPath $
+        tracks
       vec = VU.replicate (rows * cols) (0 :: Double)
       vec' =
         VU.accum

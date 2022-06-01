@@ -29,7 +29,7 @@ main = do
   let threshold = argPixelThreshold opts
       (Z :. rows :. cols) = extent img
       graph = createGraph img threshold
-      ps = findParticles graph rows cols
+      ps = findParticles graph (-1) rows cols
       folderPath = "output/test/FindParticles"
   flag <- doesPathExist folderPath
   when flag (removePathForcibly folderPath)
@@ -50,7 +50,9 @@ main = do
   --        (folderPath </> (printf "%d.png" (particleID p)))
   --        p)
   --   ps
-  MP.mapM_
-    (\(p, idx) ->
-       saveParticle rows cols (folderPath </> (printf "%d.png" idx)) p) $
-    L.zip (L.reverse . L.sortOn getBrightness $ ps) [0::Int ..]
+  -- MP.mapM_
+  --   (\(p, idx) ->
+  --      saveParticle rows cols (folderPath </> (printf "%d.png" idx)) p) $
+  --   L.zip (L.reverse . L.sortOn getBrightness $ ps) [0 :: Int ..]
+  saveParticles rows cols (folderPath </> "sum.png") ps
+  printf "%d particles found." (L.length ps)

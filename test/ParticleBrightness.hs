@@ -35,7 +35,7 @@ main = do
          let threshold = argPixelThreshold opts
              (Z :. rows :. cols) = extent img
              graph = createGraph img threshold
-             ps = findParticles graph rows cols
+             ps = findParticles graph (-1) rows cols
          return
            ( filePath
            , L.length ps

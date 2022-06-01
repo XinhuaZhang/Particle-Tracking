@@ -24,6 +24,7 @@ main = do
   opts <- foldl (>>=) (return defaultOptions) actions
   print opts
   let inputFolder = argFolderPath opts
+      maxNumberFrame = argMaxNumFrame opts
       pixelThr = argPixelThreshold opts
       probThr = argProbThreshold opts
       stParm =
@@ -45,21 +46,37 @@ main = do
   (rows, cols) <- readRowCol firstFileName
   ps <-
     filterParticles (trackingParamMaximumNumParticle trParm) <$>
-    findParticlesFromFile pixelThr firstFileName
+    findParticlesFromFile 0 pixelThr firstFileName
   print . L.length $ ps
   let initTracks = createInitTracks stParm ps
-  -- tracks <-
-  --   findTracksFromFile2 stParm tmParm pixelThr probThr initTracks .
-  --   L.map (\x -> inputFolder </> x) . L.take 1 . L.tail $
-  --   xs
-  let outputFolder = argOutputFolderPath opts
+      outputFolder = argOutputFolderPath opts
       prParm = PrintParam rows cols outputFolder
-  createDirectoryIfMissing True outputFolder
+  createDirectoryIfMissing True (outputFolder </> "Images")
+  createDirectoryIfMissing True (outputFolder </> "Data")
   tracks <-
-    findTracksFromFile4 prParm stParm tmParm trParm initTracks .
-    L.map (\x -> inputFolder </> x) . L.take 180 . L.tail $
+    findTracksFromFileCheckpoint prParm stParm tmParm trParm initTracks .
+    L.map (\x -> inputFolder </> x) . L.take (maxNumberFrame - 1) . L.tail $
     xs
+  let sortedTracks =
+        L.sortOn (snd . particleCenter . L.last . trackPath) .
+        L.filter
+          (\tr ->
+             ((L.length . trackPath $ tr) >= 10) &&
+             (fst . particleCenter . L.last . trackPath $ tr) < 700) $
+        tracks
+  print . L.map (L.length . trackPath) $ sortedTracks
   MP.mapM_
-    (\tr ->
-       saveTrack rows cols (outputFolder </> (printf "%d.png" (trackID tr))) tr) .
-    L.reverse . L.sortOn (L.length . trackPath) $tracks
+    (\(idx, tr) ->
+       saveTrack
+         rows
+         cols
+         (outputFolder </> "Images" </> (printf "%03d.png" idx))
+         tr) .
+    L.zip [0 :: Int ..] $
+    sortedTracks
+  MP.mapM_
+    (\(idx, tr) ->
+       saveTrackMeanStd (outputFolder </> "Data" </> (printf "%03d.txt" idx)) tr) .
+    L.zip [0 :: Int ..] $
+    sortedTracks
+  saveTracks rows cols (outputFolder </> "Images" </> "sum.png") sortedTracks

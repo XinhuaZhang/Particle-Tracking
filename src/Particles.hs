@@ -4,6 +4,7 @@ module Particles
   ( Point(..)
   , Particle(..)
   , State
+  , getParticleStd
   , setState
   , normalizeParticleState
   , getBrightness
@@ -12,6 +13,7 @@ module Particles
   , convertIndex'
   , filterParticles
   , saveParticle
+  , saveParticles
   ) where
   
 import IO
@@ -30,16 +32,18 @@ data Point =
 instance Hashable Point
 instance NFData Point
 
-
 instance Eq Point where
   (==) (Point x1 y1 _ ) (Point x2 y2 _ ) = x1 == x2 && y1 == y2
-                                           
+
+instance Ord Point where
+  compare (Point x1 y1 _) (Point x2 y2 _) = compare (x1, y1) (x2, y2)
+
 type State = R.Array U DIM2 Double                                
      
 data Particle = Particle
   { particlePoints :: [Point]
   , particleCenter :: (Double, Double)
-  , particleID :: Int
+  , particleID :: (Int, Int)
   , particleState :: State
   } deriving (Generic)
 
@@ -48,6 +52,22 @@ instance NFData Particle where
   
 instance Show Particle where
   show (Particle _ c idx _) = show idx L.++ ": " L.++ show c
+  
+{-# INLINE getParticleStd #-}
+getParticleStd :: Particle -> (Double, Double)
+getParticleStd p =
+  let (!cX, !cY) = particleCenter p
+      !stdX = std cX . L.map (\(Point x _ _) -> x) . particlePoints $ p
+      !stdY = std cY . L.map (\(Point _ y _) -> y) . particlePoints $ p
+   in if (L.length . particlePoints $ p) == 1
+         then (0, 0)
+         else (stdX, stdY)
+  where
+    std :: Double -> [Int] -> Double
+    std m xs =
+      sqrt $
+      (L.sum . L.map (\x -> (fromIntegral x - m) ^ 2) $ xs) /
+      (fromIntegral $ L.length xs - 1)
 
 {-# INLINE setState #-}
 setState ::  State -> Particle -> Particle
@@ -57,13 +77,12 @@ setState st (Particle xs c pid _) = Particle xs c pid st
 normalizeParticleState :: Particle -> Particle
 normalizeParticleState p =
   let st = particleState p
-      z = sumAllS st
+      !z = sumAllS st
    in setState (computeS . R.map (/ z) $ st) p 
    
 {-# INLINE getBrightness #-}
 getBrightness :: Particle -> Double
 getBrightness = L.maximum . L.map (\(Point _ _ v) -> v) . particlePoints
-
 
 {-# INLINE emptyArray #-}
 emptyArray :: State
@@ -82,6 +101,7 @@ updateParticleCenter (Particle pos _ pid pstate) =
         (fromIntegral sumX / fromIntegral n, fromIntegral sumY / fromIntegral n)
         pid
         pstate
+        
 
 createGraph :: R.Array U DIM2 Double -> Int -> HashMap Point Particle
 createGraph img threshold =
@@ -99,7 +119,7 @@ createGraph img threshold =
                        L.map (\(x', y') -> check (x + x') (y + y')) $
                        offsets)
                       (0, 0)
-                      idx
+                      (-1, idx)
                       emptyArray
                in (HM.insert key val graph, idx + 1)
          else (graph, idx))
@@ -120,8 +140,8 @@ createGraph img threshold =
         (y < cols) && ((img R.! (Z :. x :. y)) > fromIntegral threshold))
 
 {-# INLINE findParticles #-}
-findParticles :: HashMap Point Particle -> Int -> Int -> [Particle]
-findParticles map rows cols =
+findParticles :: HashMap Point Particle -> Int -> Int -> Int -> [Particle]
+findParticles map frameIdx rows cols =
   let xs = keys map
       (ys, _, _) =
         L.foldl'
@@ -133,7 +153,7 @@ findParticles map rows cols =
                    else let (isVisited', zs) = dfs map isVisited cols [p]
                             ps =
                               updateParticleCenter $
-                              Particle zs (0, 0) idx emptyArray
+                              Particle zs (0, 0) (frameIdx, idx) emptyArray
                          in (ps : ys, isVisited', idx + 1))
           ([], VU.replicate (rows * cols) False, 0)
           xs
@@ -174,6 +194,30 @@ filterParticles n = L.take n . L.reverse . L.sortOn getBrightness
 saveParticle :: Int -> Int -> FilePath -> Particle -> IO ()
 saveParticle rows cols filePath p =
   let xs = particlePoints p
+      vec = VU.replicate (rows * cols) (0 :: Double)
+      vec' =
+        vec VU.//
+        (L.map
+           (\(Point x y v) ->
+              let i = convertIndex' cols x y
+               in (i, 65535))
+           xs)
+      img' = R.fromUnboxed (Z :. rows :. cols) vec'
+   in write filePath img'
+   
+
+{-# INLINE saveParticles #-}
+saveParticles :: Int -> Int -> FilePath ->  [Particle] -> IO ()
+saveParticles rows cols filePath ps =
+  let xs =
+        L.map
+          (\ps' ->
+             let n = L.length ps'
+                 s = L.sum . L.map (\(Point _ _ v) -> v) $ ps'
+                 (Point x y _) = L.head ps'
+              in Point x y (s / fromIntegral n)) .
+        L.group . L.sort . L.concatMap particlePoints $
+        ps
       vec = VU.replicate (rows * cols) (0 :: Double)
       vec' =
         vec VU.//
