@@ -41,7 +41,7 @@ main = do
           (argPixelThreshold opts)
           (argProbThreshold opts)
           (argMaxNumParticle opts)
-  xs <- listDirectory inputFolder
+  xs <- L.drop 0 <$> listDirectory inputFolder
   let firstFileName = inputFolder </> L.head xs
   (rows, cols) <- readRowCol firstFileName
   ps <-
@@ -57,11 +57,12 @@ main = do
     findTracksFromFileCheckpoint prParm stParm tmParm trParm initTracks .
     L.map (\x -> inputFolder </> x) . L.take (maxNumberFrame - 1) . L.tail $
     xs
-  let sortedTracks =
+  let sortedTracks =        
         L.sortOn (snd . particleCenter . L.last . trackPath) .
+        removeDuplicateTracks .
         L.filter
           (\tr ->
-             ((L.length . trackPath $ tr) >= 10) &&
+             ((L.length . trackPath $ tr) >= 5) &&
              (fst . particleCenter . L.last . trackPath $ tr) < 700) $
         tracks
   print . L.map (L.length . trackPath) $ sortedTracks

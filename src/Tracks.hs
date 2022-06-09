@@ -318,7 +318,7 @@ trimTracks _ [] = []
 trimTracks n (t:ts) =
   let !bd =  trackBirthday t
       (!a, !b) = divMod (n - bd) 5
-  in if getTrackLength t <= 10 && b == 0 && getTrackLength t <= 3 * a && n > bd
+  in if getTrackLength t <= 10 && b == 0 && getTrackLength t <= 1 * a && n > bd
        then trimTracks n ts
        else t : trimTracks n ts
        
@@ -333,6 +333,35 @@ trimTracks' n (t:ts) =
         then (xs, max (getTrackLength t) maxLen)
         else (t : xs, maxLen)
 
+{-# INLINE removeDuplicateTracks #-}
+removeDuplicateTracks :: [Track] -> [Track]
+removeDuplicateTracks =
+  L.reverse .
+  L.sortOn trackID .
+  removeDuplicateAdjacentTracks . L.sortOn (L.head . trackPath)
+
+
+removeDuplicateAdjacentTracks :: [Track] -> [Track]
+removeDuplicateAdjacentTracks (x: []) = [x]
+removeDuplicateAdjacentTracks (x:y:xs) =
+  let as = trackPath x
+      bs = trackPath y
+      n = compareTracks 0 as bs
+      asLen = L.length as
+      bsLen = L.length bs
+      m = min asLen bsLen
+   in if fromIntegral n / fromIntegral m > 0.8
+        then if asLen < bsLen
+               then removeDuplicateAdjacentTracks (y : xs)
+               else removeDuplicateAdjacentTracks (x : xs)
+        else x : removeDuplicateAdjacentTracks (y : xs)
+  where
+    compareTracks :: Int -> [Particle] -> [Particle] -> Int
+    compareTracks !n [] _ = n
+    compareTracks !n _ [] = n
+    compareTracks !n (a:as) (b:bs)
+      | a == b = compareTracks (n + 1) as bs
+      | otherwise = n
 
 {-# INLINE saveTrack #-}
 saveTrack :: Int -> Int -> FilePath -> Track -> IO ()
@@ -368,7 +397,7 @@ saveTrackMeanStd filePath tr =
          let (!cX, !cY) = particleCenter p
              (!stdX, !stdY) = getParticleStd p
           in hPutStrLn h (printf "%.2f %.2f %.2f %.2f" cX cY stdX stdY)) .
-    trackPath $
+    L.reverse . trackPath $
     tr
 
 

@@ -53,6 +53,12 @@ instance NFData Particle where
 instance Show Particle where
   show (Particle _ c idx _) = show idx L.++ ": " L.++ show c
   
+instance Eq Particle where
+  (==) p1 p2 = particleID p1 == particleID p2
+  
+instance Ord Particle where
+  compare p1 p2 = compare (particleID p1) (particleID p2)
+
 {-# INLINE getParticleStd #-}
 getParticleStd :: Particle -> (Double, Double)
 getParticleStd p =
@@ -129,6 +135,8 @@ createGraph img threshold =
     (Z :. rows :. cols) = extent img
     offsets =
       [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    -- offsets =
+    --   [(-1, 0), (0, -1), (0, 1), (1, 0)]
     {-# INLINE check #-}
     check :: Int -> Int -> (Int, Int, Bool)
     check x y =

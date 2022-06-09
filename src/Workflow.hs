@@ -291,7 +291,8 @@ findTracksFromFileCheckpoint prParam stParm tmParm trParam tracks filePaths = do
                     probThr
                     ps)
                  trs
-             trimmedNewTrs' = trimTracks frameIdx newTrs'
+             trimmedNewTrs' =
+               removeDuplicateTracks . trimTracks frameIdx $ newTrs'
              unusedParticles = findUnusedParticles frameIdx trimmedNewTrs' ps
              newTrs =
                (createTracksFromParticles

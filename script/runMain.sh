@@ -2,9 +2,9 @@ InputFolder=/vast/home/xinhuazhang/Downloads/Stack1M_Compressed/
 OutputFolder=/vast/home/xinhuazhang/Workspaces/ParticleTracking/output/Tracks
 MaxNumFrame=300
 PixelTreshold=1000
-ProbThreshold=1
-Sigma=0.3
-Tau=10
+ProbThreshold=0.2
+Sigma=0.2
+Tau=20
 NumDir=90
 NumSpeed=1
 MeanSpeed=1
@@ -12,7 +12,7 @@ MinSpeed=1
 MaxSpeed=1
 SpeedSTD=1
 MaxNumParticle=100
-Threads=256
+Threads=64
 
 rm -r ${OutputFolder}
 stack build ParticleTracking:ParticleTracking-exe
