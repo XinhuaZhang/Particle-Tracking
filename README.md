@@ -32,4 +32,4 @@ This installation guide is for Linux/Ubuntu operating system. There are no plans
 
 ## Time Estimation
 
-It takes about 1 hour to process all frames on a machine that equips a AMD EPYC 7702 64-Core Processor. 
+It takes about 1 hour to process all frames on a machine with a AMD EPYC 7702 64-Core Processor. 
