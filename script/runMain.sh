@@ -12,7 +12,7 @@ MinSpeed=1
 MaxSpeed=1
 SpeedSTD=1
 MaxNumParticle=100
-Threads=64
+Threads=64             # Set this number to the number of cores of your machine.
 
 rm -r ${OutputFolder}
 stack build ParticleTracking:ParticleTracking-exe
