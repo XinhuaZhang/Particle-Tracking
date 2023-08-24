@@ -396,7 +396,8 @@ saveTrackMeanStd filePath tr =
       (\p ->
          let (!cX, !cY) = particleCenter p
              (!stdX, !stdY) = getParticleStd p
-          in hPutStrLn h (printf "%.2f %.2f %.2f %.2f" cX cY stdX stdY)) .
+             (!frameID, _) = particleID p
+          in hPutStrLn h (printf "%d %.2f %.2f %.2f %.2f" frameID cX cY stdX stdY)) .
     L.reverse . trackPath $
     tr
 

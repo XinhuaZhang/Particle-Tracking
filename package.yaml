@@ -52,7 +52,7 @@ executables:
     - -main-is Main
     - -fno-liberate-case
     - -funfolding-use-threshold1000
-    - -fllvm
+    # - -fllvm
     - -optlo-O3
     dependencies:
     - ParticleTracking
@@ -70,7 +70,7 @@ tests:
     - -main-is FindParticles
     - -fno-liberate-case
     - -funfolding-use-threshold1000
-    - -fllvm
+    # - -fllvm
     - -optlo-O3
     dependencies:
     - ParticleTracking
@@ -87,7 +87,7 @@ tests:
     - -main-is ParticleBrightness
     - -fno-liberate-case
     - -funfolding-use-threshold1000
-    - -fllvm
+    # - -fllvm
     - -optlo-O3
     dependencies:
     - ParticleTracking
