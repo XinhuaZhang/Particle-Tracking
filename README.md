@@ -15,7 +15,8 @@ This installation guide is for Linux/Ubuntu operating system. There are no plans
      ```
    * <a href="https://docs.haskellstack.org/en/stable/install_and_upgrade/">Stack full installation guide</a>
    
-2. ```bash
+2. Install packages
+   ```bash
    sudo apt-get install liblapack-dev libgsl-dev
    ```
 
@@ -27,9 +28,11 @@ This installation guide is for Linux/Ubuntu operating system. There are no plans
    ```bash
    stack build
    ```
-6. In ./script/runMain.sh, set the InputFolder to the path that contains images. The original tif images cannot be read directly. Use the Python script at ./Python/convertTiff.py to convert them first. Also, change the number of threads based on the CPU of your machine.
+6. The tiff files need to be preprocessed by the python script <a href="https://github.com/XinhuaZhang/Particle-Tracking/blob/main/Python/convertTiff.py">convertTiff.py</a>.
 
-7. ```bash
+7. In ./script/runMain.sh, set the InputFolder to the path that contains images. The original tif images cannot be read directly. Use the Python script at ./Python/convertTiff.py to convert them first. Also, change the number of threads based on the CPU of your machine.
+
+8. ```bash
    ./script/runMain.sh
    ```
 
