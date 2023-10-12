@@ -42,6 +42,7 @@ main = do
           (argProbThreshold opts)
           (argMaxNumParticle opts)
   xs <- L.drop 0 <$> listDirectory inputFolder
+  print xs
   let firstFileName = inputFolder </> L.head xs
   (rows, cols) <- readRowCol firstFileName
   ps <-
